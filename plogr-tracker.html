@@ -1009,20 +1009,22 @@ function initDragDrop() {
       touchClone.style.display = '';
       const col = el && el.closest('.kanban-col');
 
-      if (col) {
+      // Always clean up first
+      touchClone.remove();
+      touchClone = null;
+      document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+      document.querySelectorAll('.card').forEach(c => c.style.opacity = '');
+      const savedId = touchDragId;
+      touchDragId = null;
+
+      if (col && savedId) {
         const newStatus = col.dataset.status;
-        items = items.map(i => i.id === touchDragId ? {...i, status: newStatus, updated: Date.now()} : i);
+        items = items.map(i => i.id === savedId ? {...i, status: newStatus, updated: Date.now()} : i);
         saveLocal();
         schedulePush();
         render();
         const labels = { open: 'Open', inprogress: 'In Progress', done: 'Done' };
         showToast('Moved to ' + labels[newStatus], 'success');
-      } else {
-        document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
-        touchClone.remove();
-        touchClone = null;
-        touchDragId = null;
-        document.querySelectorAll('.card').forEach(c => c.style.opacity = '');
       }
     };
 
