@@ -313,9 +313,15 @@
   .card-meta {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
-    margin-bottom: 6px;
-    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .card-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
   }
 
   .tag {
@@ -365,7 +371,7 @@
 
   .list-header {
     display: grid;
-    grid-template-columns: 85px 1fr 100px 80px 80px 70px;
+    grid-template-columns: 1fr 100px 80px 80px 70px;
     gap: 10px;
     padding: 10px 14px;
     background: var(--bg);
@@ -379,7 +385,7 @@
 
   .list-row {
     display: grid;
-    grid-template-columns: 85px 1fr 100px 80px 80px 70px;
+    grid-template-columns: 1fr 100px 80px 80px 70px;
     gap: 10px;
     padding: 13px 14px;
     border-bottom: 1px solid var(--border);
@@ -393,6 +399,7 @@
 
   .list-title { font-size: 15px; font-weight: 600; line-height: 1.4; }
   .list-notes { font-size: 13px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .list-tag-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
 
   .status-tag {
     font-family: var(--mono);
@@ -408,14 +415,14 @@
   .status-done { background: rgba(76,175,125,0.12); color: var(--green); }
 
   @media (max-width: 700px) {
-    .list-header { grid-template-columns: 75px 1fr 90px 60px; }
-    .list-row { grid-template-columns: 75px 1fr 90px 60px; }
+    .list-header { grid-template-columns: 1fr 90px 60px; }
+    .list-row { grid-template-columns: 1fr 90px 60px; }
     .list-header .col-date, .list-header .col-actions,
     .list-row .col-date, .list-row .col-actions { display: none; }
   }
   @media (max-width: 480px) {
-    .list-header { grid-template-columns: 70px 1fr 85px; }
-    .list-row { grid-template-columns: 70px 1fr 85px; }
+    .list-header { grid-template-columns: 1fr 85px; }
+    .list-row { grid-template-columns: 1fr 85px; }
     .list-header .col-priority, .list-row .col-priority { display: none; }
   }
 
@@ -555,7 +562,7 @@
     <div class="logo">
       <span>PLOGR</span><span style="color:var(--accent)">·</span><span style="font-weight:400;color:var(--text-dim)">TRACKER</span>
     </div>
-    <div class="logo-sub">v1.4</div>
+    <div class="logo-sub">v1.4.4</div>
   </div>
   <div class="header-actions">
     <div class="sync-status">
@@ -1052,9 +1059,11 @@ function renderCard(item) {
     <div class="card" data-id="${item.id}" onclick="openEditModal('${item.id}')">
       <div class="card-type-stripe" style="background:${TYPE_COLORS[item.type] || 'var(--text-muted)'}"></div>
       <div class="card-meta">
-        <span class="tag tag-${item.type}">${TYPE_LABELS[item.type] || item.type}</span>
-        <div class="priority-dot p-${item.priority}" title="${PRIORITY_LABELS[item.priority]}"></div>
-        <span class="status-tag status-${item.status}" style="margin-left:auto;">${STATUS_LABELS[item.status]}</span>
+        <div class="card-meta-left">
+          <span class="tag tag-${item.type}">${TYPE_LABELS[item.type] || item.type}</span>
+          <div class="priority-dot p-${item.priority}" title="${PRIORITY_LABELS[item.priority]}"></div>
+        </div>
+        <span class="status-tag status-${item.status}">${STATUS_LABELS[item.status]}</span>
       </div>
       <div class="card-title">${escHtml(item.title)}</div>
       ${item.notes ? `<div class="card-notes">${escHtml(item.notes)}</div>` : ''}
@@ -1097,13 +1106,13 @@ function renderList(filtered) {
   }
   return `<div class="list-view">
     <div class="list-header">
-      <div>Type</div><div>Title / Notes</div><div>Status</div>
+      <div>Title / Notes</div><div>Status</div>
       <div class="col-priority">Priority</div><div class="col-date">Created</div><div class="col-actions"></div>
     </div>
     ${filtered.map(item => `
       <div class="list-row" onclick="openEditModal('${item.id}')">
-        <div><span class="tag tag-${item.type}">${TYPE_LABELS[item.type] || item.type}</span></div>
         <div>
+          <div class="list-tag-row"><span class="tag tag-${item.type}">${TYPE_LABELS[item.type] || item.type}</span></div>
           <div class="list-title">${escHtml(item.title)}</div>
           ${item.notes ? `<div class="list-notes">${escHtml(item.notes)}</div>` : ''}
         </div>
