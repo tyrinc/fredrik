@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plogr Tracker</title>
+<link rel="manifest" href="#" />
+<meta name="theme-color" content="#1a1a1a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Plogr Tracker" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #141414;
+    --surface: #1e1e1e;
+    --surface2: #252525;
+    --surface3: #2d2d2d;
+    --border: #333;
+    --border2: #3d3d3d;
+    --accent: #e05c2a;
+    --accent-dim: rgba(224,92,42,0.15);
+    --accent-glow: rgba(224,92,42,0.3);
+    --text: #e8e8e8;
+    --text-dim: #888;
+    --text-muted: #555;
+    --green: #4caf7d;
+    --yellow: #e0b82a;
+    --red: #e05c5c;
+    --blue: #5c9fe0;
+    --purple: #9c7de0;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ─── Header ─── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo span.accent { color: var(--accent); }
+
+  .logo-sub {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sync-status {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .sync-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background 0.3s;
+  }
+  .sync-dot.synced { background: var(--green); }
+  .sync-dot.syncing { background: var(--yellow); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--red); }
+
+  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.3 } }
+
+  /* ─── Buttons ─── */
+  btn, .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .btn:hover { background: var(--surface3); border-color: var(--border2); }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #c94f22; border-color: #c94f22; }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-icon { padding: 7px; }
+
+  /* ─── Toolbar ─── */
+  .toolbar {
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px;
+  }
+
+  .filter-btn {
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn.active {
+    background: var(--surface3);
+    color: var(--text);
+  }
+  .filter-btn.active.type-bug { color: var(--red); }
+  .filter-btn.active.type-feature { color: var(--blue); }
+  .filter-btn.active.type-idea { color: var(--purple); }
+  .filter-btn.active.type-done { color: var(--green); }
+
+  .view-toggle {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+  }
+
+  .view-btn {
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+  }
+
+  .view-btn.active {
+    background: var(--surface3);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+
+  /* ─── Main ─── */
+  main {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ─── Kanban ─── */
+  .kanban {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  @media (max-width: 900px) {
+    .kanban { grid-template-columns: 1fr; }
+  }
+
+  .kanban-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .kanban-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .kanban-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .kanban-count {
+    background: var(--surface3);
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .kanban-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 100px;
+  }
+
+  /* ─── Cards ─── */
+  .card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .card:hover {
+    border-color: var(--border2);
+    background: var(--surface3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .card-type-stripe {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .tag-bug { background: rgba(224,92,92,0.15); color: var(--red); }
+  .tag-feature { background: rgba(92,159,224,0.15); color: var(--blue); }
+  .tag-idea { background: rgba(156,125,224,0.15); color: var(--purple); }
+  .tag-done { background: rgba(76,175,125,0.15); color: var(--green); }
+
+  .priority-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .p-high { background: var(--red); }
+  .p-med { background: var(--yellow); }
+  .p-low { background: var(--green); }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+
+  .card-notes {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-footer {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-date {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .card:hover .card-actions { opacity: 1; }
+
+  /* ─── List View ─── */
+  .list-view {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .list-header {
+    display: grid;
+    grid-template-columns: 90px 1fr 80px 100px 90px 80px;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .list-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 80px 100px 90px 80px;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .list-row:last-child { border-bottom: none; }
+  .list-row:hover { background: var(--surface2); }
+
+  .list-title { font-size: 13px; font-weight: 600; }
+  .list-notes { font-size: 11px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .status-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .status-open { background: rgba(224,92,42,0.12); color: var(--accent); }
+  .status-inprogress { background: rgba(224,184,42,0.12); color: var(--yellow); }
+  .status-done { background: rgba(76,175,125,0.12); color: var(--green); }
+
+  @media (max-width: 700px) {
+    .list-header { grid-template-columns: 80px 1fr 70px 80px; }
+    .list-row { grid-template-columns: 80px 1fr 70px 80px; }
+    .list-row .col-priority, .list-row .col-actions { display: none; }
+    .list-header .col-priority, .list-header .col-actions { display: none; }
+  }
+
+  /* ─── Modal ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    width: 100%;
+    max-width: 520px;
+    transform: translateY(10px);
+    transition: transform 0.2s;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  input[type=text], textarea, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 9px 12px;
+    transition: border-color 0.15s;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  input[type=text]:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  select option { background: var(--surface); }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  /* ─── Settings Modal ─── */
+  .settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .settings-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+
+  /* ─── Empty State ─── */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+  .empty-text { font-size: 12px; font-family: var(--mono); }
+
+  /* ─── Stats bar ─── */
+  .stats {
+    display: flex;
+    gap: 20px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .stat strong { color: var(--text); font-size: 14px; }
+
+  /* ─── Toast ─── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 12px;
+    font-family: var(--mono);
+    z-index: 2000;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ─── Confirm ─── */
+  .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  .col-priority-display { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div class="logo">
+      <span>PLOGR</span><span class="accent">·</span><span style="font-weight:400;color:var(--text-dim);">TRACKER</span>
+    </div>
+    <div class="logo-sub">v1.0</div>
+  </div>
+  <div class="header-actions">
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">not configured</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙ Settings</button>
+    <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Add Item</button>
+  </div>
+</header>
+
+<!-- Stats -->
+<div class="stats" id="statsBar"></div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="filter-group" id="typeFilter">
+    <button class="filter-btn active" data-type="all" onclick="setTypeFilter('all',this)">All</button>
+    <button class="filter-btn" data-type="bug" onclick="setTypeFilter('bug',this)">🐛 Bugs</button>
+    <button class="filter-btn" data-type="feature" onclick="setTypeFilter('feature',this)">✦ Features</button>
+    <button class="filter-btn" data-type="idea" onclick="setTypeFilter('idea',this)">💡 Ideas</button>
+    <button class="filter-btn" data-type="done" onclick="setTypeFilter('done',this)">✓ Done</button>
+  </div>
+  <div class="filter-group" id="priorityFilter">
+    <button class="filter-btn active" data-priority="all" onclick="setPriorityFilter('all',this)">All</button>
+    <button class="filter-btn" data-priority="high" onclick="setPriorityFilter('high',this)">High</button>
+    <button class="filter-btn" data-priority="med" onclick="setPriorityFilter('med',this)">Med</button>
+    <button class="filter-btn" data-priority="low" onclick="setPriorityFilter('low',this)">Low</button>
+  </div>
+  <div class="view-toggle">
+    <button class="view-btn active" id="kanbanViewBtn" onclick="setView('kanban')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="4" height="14" rx="1"/><rect x="5" y="0" width="4" height="14" rx="1"/><rect x="10" y="0" width="4" height="14" rx="1"/></svg>
+    </button>
+    <button class="view-btn" id="listViewBtn" onclick="setView('list')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="14" height="2" rx="1"/><rect x="0" y="4" width="14" height="2" rx="1"/><rect x="0" y="8" width="14" height="2" rx="1"/><rect x="0" y="12" width="14" height="2" rx="1"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Main -->
+<main id="mainContent"></main>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modalTitle">New Item</span>
+      <button class="btn-ghost btn" onclick="closeModal('itemModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="fTitle" placeholder="Describe the issue or feature…">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type</label>
+        <select id="fType">
+          <option value="bug">🐛 Bug</option>
+          <option value="feature">✦ Feature</option>
+          <option value="idea">💡 Idea</option>
+          <option value="done">✓ Done</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="fPriority">
+          <option value="high">High</option>
+          <option value="med">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="fStatus">
+        <option value="open">Open</option>
+        <option value="inprogress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="fNotes" placeholder="Additional context, steps to reproduce, etc…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('itemModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItem()">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span>⚙ GitHub Gist Settings</span>
+      <button class="btn-ghost btn" onclick="closeModal('settingsModal')">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;line-height:1.6;">
+      Sync your data via a private GitHub Gist. Create a token at <strong>github.com/settings/tokens</strong> with <code style="color:var(--accent)">gist</code> scope. Create a new Gist at <strong>gist.github.com</strong> (can be empty) and paste its ID below.
+    </p>
+    <div class="settings-field">
+      <label>GitHub Personal Access Token</label>
+      <input type="text" id="sToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+      <div class="settings-hint">Stored locally in this browser only</div>
+    </div>
+    <div class="settings-field">
+      <label>Gist ID</label>
+      <input type="text" id="sGistId" placeholder="e.g. a1b2c3d4e5f6...">
+      <div class="settings-hint">The long hex ID from your Gist URL</div>
+    </div>
+    <div class="settings-field">
+      <label>Gist Filename</label>
+      <input type="text" id="sFilename" placeholder="plogr-tracker.json">
+      <div class="settings-hint">Filename used inside the Gist</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="testSync()">Test Connection</button>
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save & Sync</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title"><span>Delete Item?</span></div>
+    <p style="font-size:13px;color:var(--text-dim);">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn" style="background:var(--red);border-color:var(--red);color:#fff;" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────
+let items = [];
+let editingId = null;
+let deleteId = null;
+let currentView = 'kanban';
+let typeFilter = 'all';
+let priorityFilter = 'all';
+let settings = { token: '', gistId: '', filename: 'plogr-tracker.json' };
+let syncTimer = null;
+
+// ─── Init ────────────────────────────────────────────────────
+function init() {
+  loadSettings();
+  loadLocal();
+  render();
+  if (settings.token && settings.gistId) {
+    pullFromGist();
+  }
+}
+
+// ─── Local Storage ───────────────────────────────────────────
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem('plogr_items');
+    if (raw) items = JSON.parse(raw);
+  } catch(e) {}
+}
+
+function saveLocal() {
+  localStorage.setItem('plogr_items', JSON.stringify(items));
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('plogr_settings');
+    if (raw) settings = { ...settings, ...JSON.parse(raw) };
+  } catch(e) {}
+}
+
+function persistSettings() {
+  localStorage.setItem('plogr_settings', JSON.stringify(settings));
+}
+
+// ─── Gist Sync ───────────────────────────────────────────────
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+async function pushToGist() {
+  if (!settings.token || !settings.gistId) return;
+  setSyncStatus('syncing', 'saving…');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${settings.gistId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `token ${settings.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        files: {
+          [settings.filename]: {
+            content: JSON.stringify(items, null, 2)
+          }
+        }
+      })
+    });
+    if (!res.ok) throw new Error(res.statusText);
+    setSyncStatus('synced', 'synced');
+    setTimeout(() => setSyncStatus('synced', 'saved'), 2000);
+  } catch(e) {
+    setSyncStatus('error', 'sync failed');
+    showToast('Sync failed: ' + e.message, 'error');
+  }
+}
+
+async function pullFromGist() {
+  if (!settings.token || !settings.gistId) return;
+  setSyncStatus('syncing', 'loading…');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${settings.gistId}`, {
+      headers: { Authorization: `token ${settings.token}` }
+    });
+    if (!res.ok) throw new Error(res.statusText);
+    const data = await res.json();
+    const file = data.files[settings.filename];
+    if (file && file.content) {
+      const remote = JSON.parse(file.content);
+      items = remote;
+      saveLocal();
+      render();
+    }
+    setSyncStatus('synced', 'synced');
+  } catch(e) {
+    setSyncStatus('error', 'load failed');
+  }
+}
+
+function schedulePush() {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushToGist, 1500);
+}
+
+// ─── CRUD ────────────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New Item';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fType').value = 'bug';
+  document.getElementById('fPriority').value = 'med';
+  document.getElementById('fStatus').value = 'open';
+  document.getElementById('fNotes').value = '';
+  openModal('itemModal');
+}
+
+function openEditModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Item';
+  document.getElementById('fTitle').value = item.title;
+  document.getElementById('fType').value = item.type;
+  document.getElementById('fPriority').value = item.priority;
+  document.getElementById('fStatus').value = item.status;
+  document.getElementById('fNotes').value = item.notes || '';
+  openModal('itemModal');
+}
+
+function saveItem() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { showToast('Title is required', 'error'); return; }
+  const item = {
+    id: editingId || Date.now().toString(36) + Math.random().toString(36).slice(2),
+    title,
+    type: document.getElementById('fType').value,
+    priority: document.getElementById('fPriority').value,
+    status: document.getElementById('fStatus').value,
+    notes: document.getElementById('fNotes').value.trim(),
+    created: editingId ? (items.find(i=>i.id===editingId)?.created || Date.now()) : Date.now(),
+    updated: Date.now()
+  };
+  if (editingId) {
+    items = items.map(i => i.id === editingId ? item : i);
+    showToast('Item updated', 'success');
+  } else {
+    items.unshift(item);
+    showToast('Item added', 'success');
+  }
+  saveLocal();
+  schedulePush();
+  closeModal('itemModal');
+  render();
+}
+
+function askDelete(id) {
+  deleteId = id;
+  openModal('confirmModal');
+}
+
+function confirmDelete() {
+  items = items.filter(i => i.id !== deleteId);
+  saveLocal();
+  schedulePush();
+  closeModal('confirmModal');
+  render();
+  showToast('Item deleted');
+}
+
+// ─── Settings ────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('sToken').value = settings.token;
+  document.getElementById('sGistId').value = settings.gistId;
+  document.getElementById('sFilename').value = settings.filename || 'plogr-tracker.json';
+  openModal('settingsModal');
+}
+
+function saveSettings() {
+  settings.token = document.getElementById('sToken').value.trim();
+  settings.gistId = document.getElementById('sGistId').value.trim();
+  settings.filename = document.getElementById('sFilename').value.trim() || 'plogr-tracker.json';
+  persistSettings();
+  closeModal('settingsModal');
+  if (settings.token && settings.gistId) {
+    pullFromGist();
+  }
+}
+
+async function testSync() {
+  const token = document.getElementById('sToken').value.trim();
+  const gistId = document.getElementById('sGistId').value.trim();
+  if (!token || !gistId) { showToast('Enter token and Gist ID first', 'error'); return; }
+  try {
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { Authorization: `token ${token}` }
+    });
+    if (res.ok) showToast('Connection successful!', 'success');
+    else showToast('Connection failed: ' + res.statusText, 'error');
+  } catch(e) {
+    showToast('Connection failed', 'error');
+  }
+}
+
+// ─── Filters & View ──────────────────────────────────────────
+function setTypeFilter(val, btn) {
+  typeFilter = val;
+  document.querySelectorAll('#typeFilter .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function setPriorityFilter(val, btn) {
+  priorityFilter = val;
+  document.querySelectorAll('#priorityFilter .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('kanbanViewBtn').classList.toggle('active', v === 'kanban');
+  document.getElementById('listViewBtn').classList.toggle('active', v === 'list');
+  render();
+}
+
+function getFiltered() {
+  return items.filter(item => {
+    if (typeFilter !== 'all' && item.type !== typeFilter) return false;
+    if (priorityFilter !== 'all' && item.priority !== priorityFilter) return false;
+    return true;
+  });
+}
+
+// ─── Render ──────────────────────────────────────────────────
+const TYPE_LABELS = { bug: '🐛 Bug', feature: '✦ Feature', idea: '💡 Idea', done: '✓ Done' };
+const TYPE_COLORS = { bug: 'var(--red)', feature: 'var(--blue)', idea: 'var(--purple)', done: 'var(--green)' };
+const STATUS_LABELS = { open: 'Open', inprogress: 'In Progress', done: 'Done' };
+const PRIORITY_LABELS = { high: 'High', med: 'Medium', low: 'Low' };
+
+function formatDate(ts) {
+  return new Date(ts).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
+}
+
+function renderCard(item) {
+  return `
+    <div class="card" onclick="openEditModal('${item.id}')">
+      <div class="card-type-stripe" style="background:${TYPE_COLORS[item.type]}"></div>
+      <div style="padding-left:8px;">
+        <div class="card-meta">
+          <span class="tag tag-${item.type}">${TYPE_LABELS[item.type]}</span>
+          <div class="priority-dot p-${item.priority}" title="${PRIORITY_LABELS[item.priority]}"></div>
+          <span class="status-tag status-${item.status}" style="margin-left:auto;">${STATUS_LABELS[item.status]}</span>
+        </div>
+        <div class="card-title">${escHtml(item.title)}</div>
+        ${item.notes ? `<div class="card-notes">${escHtml(item.notes)}</div>` : ''}
+        <div class="card-footer">
+          <span class="card-date">${formatDate(item.created)}</span>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm btn-icon" title="Edit" onclick="event.stopPropagation();openEditModal('${item.id}')">✎</button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Delete" onclick="event.stopPropagation();askDelete('${item.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderKanban(filtered) {
+  const cols = [
+    { id: 'open', label: 'Open', color: 'var(--accent)' },
+    { id: 'inprogress', label: 'In Progress', color: 'var(--yellow)' },
+    { id: 'done', label: 'Done', color: 'var(--green)' }
+  ];
+  return `<div class="kanban">` + cols.map(col => {
+    const colItems = filtered.filter(i => i.status === col.id);
+    return `
+      <div class="kanban-col">
+        <div class="kanban-header">
+          <div class="kanban-title" style="color:${col.color}">${col.label}</div>
+          <span class="kanban-count">${colItems.length}</span>
+        </div>
+        <div class="kanban-body">
+          ${colItems.length ? colItems.map(renderCard).join('') : `<div class="empty"><div class="empty-icon">○</div><div class="empty-text">empty</div></div>`}
+        </div>
+      </div>`;
+  }).join('') + `</div>`;
+}
+
+function renderList(filtered) {
+  if (!filtered.length) {
+    return `<div class="list-view"><div class="empty" style="padding:60px;"><div class="empty-icon">○</div><div class="empty-text">no items match current filters</div></div></div>`;
+  }
+  return `<div class="list-view">
+    <div class="list-header">
+      <div>Type</div><div>Title</div><div>Status</div><div>Priority</div><div class="col-priority">Created</div><div class="col-actions"></div>
+    </div>
+    ${filtered.map(item => `
+      <div class="list-row" onclick="openEditModal('${item.id}')">
+        <div><span class="tag tag-${item.type}">${TYPE_LABELS[item.type]}</span></div>
+        <div>
+          <div class="list-title">${escHtml(item.title)}</div>
+          ${item.notes ? `<div class="list-notes">${escHtml(item.notes)}</div>` : ''}
+        </div>
+        <div><span class="status-tag status-${item.status}">${STATUS_LABELS[item.status]}</span></div>
+        <div><div class="col-priority-display"><div class="priority-dot p-${item.priority}"></div>${PRIORITY_LABELS[item.priority]}</div></div>
+        <div class="col-priority card-date">${formatDate(item.created)}</div>
+        <div class="col-actions" style="display:flex;gap:4px;">
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation();openEditModal('${item.id}')">✎</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation();askDelete('${item.id}')">✕</button>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderStats() {
+  const counts = {
+    bugs: items.filter(i=>i.type==='bug').length,
+    features: items.filter(i=>i.type==='feature').length,
+    ideas: items.filter(i=>i.type==='idea').length,
+    done: items.filter(i=>i.type==='done' || i.status==='done').length,
+    high: items.filter(i=>i.priority==='high' && i.status!=='done').length
+  };
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><strong>${items.length}</strong> total</div>
+    <div class="stat" style="color:var(--red)"><strong>${counts.bugs}</strong> bugs</div>
+    <div class="stat" style="color:var(--blue)"><strong>${counts.features}</strong> features</div>
+    <div class="stat" style="color:var(--purple)"><strong>${counts.ideas}</strong> ideas</div>
+    <div class="stat" style="color:var(--green)"><strong>${counts.done}</strong> done</div>
+    ${counts.high ? `<div class="stat" style="color:var(--red);margin-left:auto"><strong>${counts.high}</strong> high priority open</div>` : ''}
+  `;
+}
+
+function render() {
+  const filtered = getFiltered();
+  renderStats();
+  document.getElementById('mainContent').innerHTML =
+    currentView === 'kanban' ? renderKanban(filtered) : renderList(filtered);
+}
+
+// ─── Modals ──────────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(el => closeModal(el.id));
+  }
+});
+
+// ─── Toast ───────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── Utils ───────────────────────────────────────────────────
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Go ──────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
